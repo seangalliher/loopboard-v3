@@ -11,21 +11,22 @@
 
 ## Look and feel
 
-LoopBoard should look like a current product, in the spirit of Linear or Trello today, not a form on a page:
+This is a launch requirement, not polish: LoopBoard must look like a 2026 product (think Linear, or Trello today), at desktop and phone width, in light and dark. A screen that looks like a form on a page fails the goal even if every feature works.
 
-- A small design system in plain CSS: custom-property tokens for type (a system UI font stack and a size scale), spacing, colour roles for light and dark, radius and shadow. Cards are soft, rounded surfaces on a quiet board background, not bordered boxes.
-- Adding a card: an "Add card" button at the foot of each column opens a compact inline form; Enter saves, Escape cancels, and the form closes again.
-- Import and export live in a menu in the header; the native file input is never visible.
-- A column's WIP limit is set from that column's menu, not from a number box in every header. The header shows the count against the limit as a badge that turns to a warning colour when over.
-- Empty columns show a short hint instead of blank space.
-- Short transitions for moving cards and opening forms, turned off under `prefers-reduced-motion`.
-- The theme toggle is an icon button in the header.
-- At phone width the columns stack or scroll sideways without anything cut off.
-- `scripts/visual-setup.mjs` (used by the loop's screenshots) fills the board with a few sample cards, one of them over a WIP limit, so the screenshots show a working board.
+- **Design system:** Tailwind CSS v4 (through `@tailwindcss/vite`), with the theme tokens defined once in CSS (`@theme`): Inter (self-hosted through `@fontsource-variable/inter`) with a system UI fallback, a type scale, spacing, radius, subtle layered shadows, and colour roles for light and dark (surface, raised surface, text, muted text, border, accent, warning, danger). Icons from `lucide`. No other UI libraries.
+- **Board:** a quiet board background; columns as rounded panels, each with its own accent colour (a thin top bar or dot) and a header showing the name and a count badge. Cards are raised, rounded surfaces with comfortable padding, no hard borders, the title prominent and the note and due date muted below it; an overdue date shows in the danger colour.
+- **Cards:** hovering a card lifts it slightly and shows a drag handle and a "…" menu (Edit, Delete); no row of buttons on every card. While dragging, the card tilts slightly and the drop position is shown. Keyboard moves work from the focused card (and its menu offers "Move to …").
+- **Adding a card:** an "Add card" button at the foot of each column opens a compact inline form (title, then optional note and due date); Enter saves, Escape cancels, and the form closes again.
+- **WIP limits:** set from the column's "…" menu, not from a number box in every header. The header badge shows count / limit and turns to the warning colour when over, with a short warning line under the header.
+- **Header:** the app name with a small logo mark; Import and Export in a menu (Import is a button; the native file input is never visible); the theme toggle is an icon button (system, light, dark).
+- **Empty states:** an empty column shows a short, friendly hint with an icon, not blank space; an empty board on first load shows three sample cards the user can delete.
+- **Motion:** short transitions for hover, menus, opening forms and moving cards, all turned off under `prefers-reduced-motion`.
+- **Phone width:** columns scroll sideways with snap (or stack), nothing cut off, touch targets at least 44 px.
+- `scripts/visual-setup.mjs` (used by the loop's screenshots) fills the board with a few sample cards, one column over its WIP limit and one card overdue, so the screenshots show a working board.
 
 ## Engineering
 
-- Vite + TypeScript, no UI framework. Relative asset paths (Vite `base: './'`), so the same build works locally and on Pages. `npm run preview` serves the build. Unit tests with Vitest for the board logic; one Playwright smoke test (add a card, move it, reload, it is still there).
+- Vite + TypeScript, no component framework (no React, Vue or Svelte); styling as above. Relative asset paths (Vite `base: './'`), so the same build works locally and on Pages. `npm run preview` serves the build. Unit tests with Vitest for the board logic; one Playwright smoke test (add a card, move it, reload, it is still there).
 - GitHub Actions CI running lint, unit tests and the smoke test on every PR.
 - Deploy to GitHub Pages from `main`.
 
