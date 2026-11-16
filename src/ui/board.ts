@@ -6,6 +6,7 @@ import type { CardActions } from './card';
 import { createColumn } from './column';
 import { attachDrag } from './drag';
 import { icon } from './icon';
+import { MOVE_HINT, MOVE_HINT_ID, attachKeyboard, previewBoard } from './keyboard';
 import { WIP_ERROR, createWipForm, limitFromText, type WipForm } from './wip-form';
 
 /** `crypto.randomUUID` only exists in secure contexts (https, localhost); a LAN preview has none. */
@@ -18,17 +19,28 @@ function newId(): string {
 /**
  * Draws the board into `root` and redraws it from the store's state after every change.
  * Focus is restored by `data-card-id` (or, for the add-card controls, which survive redraws,
- * by element), and scroll positions are kept. While a card is being dragged nothing is
- * redrawn; one redraw follows when the drag ends.
+ * by element), and scroll positions are kept. While a card is being dragged, or is grabbed with
+ * the keyboard, store changes are not drawn; one redraw follows when it ends. A grabbed card is
+ * drawn in its prospective position (not saved until the drop) by a redraw the keyboard asks for.
  */
 export function mountBoard(root: HTMLElement, store: Store): void {
   const status = document.createElement('div');
   status.className = 'status';
   status.setAttribute('role', 'status');
 
+  // One polite live region for the keyboard moves, and the text the cards are described by.
+  const live = document.createElement('div');
+  live.className = 'sr-only';
+  live.setAttribute('aria-live', 'polite');
+  live.setAttribute('aria-atomic', 'true');
+  const hint = document.createElement('p');
+  hint.className = 'sr-only';
+  hint.id = MOVE_HINT_ID;
+  hint.textContent = MOVE_HINT;
+
   const columns = document.createElement('div');
   columns.className = 'board';
-  root.append(status, columns);
+  root.append(status, live, hint, columns);
 
   // The add forms and WIP panels live outside the redraw so a half-typed value survives a
   // change elsewhere. An open edit form does too, for the same reason.
@@ -38,14 +50,27 @@ export function mountBoard(root: HTMLElement, store: Store): void {
   let renderedDay = '';
   let renderWaiting = false;
 
+  /** Saves a move made by a drag or the keyboard; a refused or failed save is shown. */
+  function dropCard(cardId: string, to: { columnId: ColumnId; index: number }) {
+    const before = store.getState();
+    const result = store.dispatch((b) => moveCard(b, cardId, to.columnId, to.index));
+    if (store.getState() !== before) showStatus(result.ok ? null : result.error);
+  }
+
   const drag = attachDrag(columns, {
-    onDrop(cardId, target) {
-      const before = store.getState();
-      const result = store.dispatch((b) => moveCard(b, cardId, target.columnId, target.index));
-      if (store.getState() !== before) showStatus(result.ok ? null : result.error);
-    },
+    onDrop: dropCard,
     onFinish: () => {
       if (renderWaiting) render();
+    },
+  });
+
+  const keyboard = attachKeyboard(columns, {
+    getBoard: () => store.getState(),
+    canGrab: () => !drag.active,
+    onChange: () => render(true),
+    onDrop: dropCard,
+    announce: (message) => {
+      live.textContent = message;
     },
   });
 
@@ -146,7 +171,23 @@ export function mountBoard(root: HTMLElement, store: Store): void {
     else findColumn(column.id)?.querySelector<HTMLElement>('[data-add-card]:not([hidden])')?.focus();
   }
 
-  const cardActions: CardActions = { onEdit: startEdit, onDelete: remove };
+  /** Moves the card to the end of `to` (from its "…" menu) and puts focus on it. */
+  function moveToColumn(cardId: string, to: ColumnId) {
+    const end = store.getState().columns.find((c) => c.id === to)?.cards.length ?? 0;
+    dropCard(cardId, { columnId: to, index: end });
+    const card = findCard(cardId);
+    card?.focus();
+    card?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
+
+  const cardActions: CardActions = {
+    onEdit: startEdit,
+    onDelete: remove,
+    onMove: moveToColumn,
+    get columns() {
+      return store.getState().columns;
+    },
+  };
 
   /** Applies the limit through the model; the form shows the returned message, if any. */
   function changeLimit(columnId: ColumnId, limit: number | null): string | null {
@@ -170,13 +211,15 @@ export function mountBoard(root: HTMLElement, store: Store): void {
     return form;
   }
 
-  function render() {
-    if (drag.active) {
+  /** Draws the board. `own` is a redraw the keyboard asks for; any other call waits for the drag or grab to end. */
+  function render(own = false) {
+    if (!own && (drag.active || keyboard.grab)) {
       renderWaiting = true;
       return;
     }
     renderWaiting = false;
-    if (editing && !store.getState().columns.some((c) => c.cards.some((x) => x.id === editing?.cardId))) {
+    const board = keyboard.grab ? previewBoard(store.getState(), keyboard.grab) : store.getState();
+    if (editing && !board.columns.some((c) => c.cards.some((x) => x.id === editing?.cardId))) {
       editing = null;
     }
     const active = document.activeElement instanceof HTMLElement && root.contains(document.activeElement)
@@ -196,7 +239,7 @@ export function mountBoard(root: HTMLElement, store: Store): void {
     const today = new Date();
     renderedDay = localDate(today);
     columns.replaceChildren(
-      ...store.getState().columns.map((column) => {
+      ...board.columns.map((column) => {
         let form = forms.get(column.id);
         if (!form) {
           form = createAddForm(column.title, (values) => add(column.id, values));
@@ -244,7 +287,7 @@ export function mountBoard(root: HTMLElement, store: Store): void {
     }, midnight.getTime() - now.getTime());
   }
 
-  store.subscribe(render);
+  store.subscribe(() => render());
   render();
   armMidnightRefresh();
   // Timers can be paused while the page is hidden or frozen, so also check when it comes back.

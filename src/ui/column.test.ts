@@ -14,7 +14,16 @@ const parts = (over: Partial<ColumnParts> = {}): ColumnParts => ({
   wipForm: document.createElement('form'),
   editing: null,
   onSetWipLimit: () => {},
-  cardActions: { onEdit: () => {}, onDelete: () => {} },
+  cardActions: {
+    onEdit: () => {},
+    onDelete: () => {},
+    onMove: () => {},
+    columns: [
+      { id: 'todo', title: 'To do' },
+      { id: 'doing', title: 'Doing' },
+      { id: 'done', title: 'Done' },
+    ],
+  },
   ...over,
 });
 

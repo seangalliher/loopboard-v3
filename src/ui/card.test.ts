@@ -5,7 +5,16 @@ import { createCard } from './card';
 
 const TODAY = new Date(2030, 5, 15); // 15 June 2030, local time
 const make = (over: Partial<Card> = {}): Card => ({ id: 'c1', title: 'Write docs', note: '', due: null, ...over });
-const noActions = { onEdit: () => {}, onDelete: () => {} };
+const noActions = {
+  onEdit: () => {},
+  onDelete: () => {},
+  onMove: () => {},
+  columns: [
+    { id: 'todo', title: 'To do' },
+    { id: 'doing', title: 'Doing' },
+    { id: 'done', title: 'Done' },
+  ] as const,
+};
 const render = (card: Card, column: ColumnId = 'todo') => createCard(card, column, TODAY, noActions);
 
 describe('createCard', () => {
@@ -14,6 +23,13 @@ describe('createCard', () => {
     expect(el.dataset.cardId).toBe('c1');
     expect(el.querySelector('.card-title')?.textContent).toBe('Write docs');
     expect(el.tabIndex).toBe(0);
+  });
+
+  it('has the title as its accessible name and the move hint as its description', () => {
+    const el = render(make({ title: 'Write docs', note: 'Long note' }));
+    expect(el.getAttribute('aria-label')).toBe('Write docs');
+    expect(el.getAttribute('aria-describedby')).toBe('card-move-hint');
+    expect(el.querySelector('.card-handle')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('omits the note and due date when there are none', () => {
@@ -83,17 +99,24 @@ describe('createCard', () => {
       expect(handle.querySelector('svg')).not.toBeNull();
     });
 
-    it('lists Edit and Delete, and each calls its action with the card id', () => {
+    it('lists Edit, a Move to for each other column, and Delete; each calls its action with the card id', () => {
       const onEdit = vi.fn();
       const onDelete = vi.fn();
-      const el = createCard(make({ id: 'x9' }), 'todo', TODAY, { onEdit, onDelete });
+      const onMove = vi.fn();
+      const el = createCard(make({ id: 'x9' }), 'doing', TODAY, { ...noActions, onEdit, onDelete, onMove });
       document.body.append(el);
       el.querySelector<HTMLButtonElement>('[data-card-menu]')?.click();
       const items = [...el.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-      expect(items.map((i) => i.textContent)).toEqual(['Edit', 'Delete']);
+      expect(items.map((i) => i.textContent)).toEqual(['Edit', 'Move to To do', 'Move to Done', 'Delete']);
       items[0].click();
       items[1].click();
+      items[2].click();
+      items[3].click();
       expect(onEdit).toHaveBeenCalledExactlyOnceWith('x9');
+      expect(onMove.mock.calls).toEqual([
+        ['x9', 'todo'],
+        ['x9', 'done'],
+      ]);
       expect(onDelete).toHaveBeenCalledExactlyOnceWith('x9');
       el.remove();
     });

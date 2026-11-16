@@ -328,6 +328,16 @@
     transform: none;
   }
 
+  /*
+   * Grabbed with the keyboard (Space): lifted higher and ringed in the accent colour next to the
+   * ordinary focus ring, so it reads as "in hand". No background tint: the overdue date's red
+   * only just reaches 4.5:1 on the plain card.
+   */
+  .card.is-grabbed {
+    box-shadow: var(--shadow-lifted), 0 0 0 2px var(--color-accent);
+    transform: translateY(-4px);
+  }
+
   .board.is-dragging,
   .board.is-dragging * {
     @apply cursor-grabbing;
@@ -435,6 +445,15 @@
 
   .field[aria-invalid='true'] {
     box-shadow: 0 0 0 2px var(--color-danger);
+  }
+
+  /*
+   * The date field's calendar button is a tab stop inside the input, and the input itself does not
+   * match :focus-visible while it has focus: ring the whole field instead, the same ring.
+   */
+  input[type='date']:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .field-row {
