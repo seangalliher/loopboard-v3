@@ -36,7 +36,7 @@
   --color-surface: #eceef2;
   --color-raised: #ffffff;
   --color-fg: #14161a;
-  --color-muted: #667085;
+  --color-muted: #596273;
   --color-line: #e2e5ea;
   --color-hover: rgb(20 22 26 / 0.06);
   --color-accent: #5b5bd6;
@@ -151,29 +151,217 @@
     @apply text-muted shrink-0;
   }
 
+  .btn-primary {
+    @apply bg-accent text-on-accent;
+  }
+
+  .btn-primary:hover {
+    background-color: color-mix(in oklab, var(--color-accent) 88%, black);
+  }
+
+  /* The board: three columns on desktop; one swipeable, snapping row on a phone. */
+  .status:empty {
+    display: none;
+  }
+
+  .status-banner {
+    @apply bg-raised shadow-rest mb-3 flex items-center gap-3 rounded-lg py-1.5 pr-1.5 pl-3 text-md;
+  }
+
+  .status-banner p {
+    @apply min-w-0 flex-1;
+  }
+
+  .status-icon {
+    @apply shrink-0;
+    color: var(--color-danger);
+  }
+
+  .board {
+    @apply gap-3;
+    /* Viewport minus the header (3.5rem) and the padding around the board. */
+    height: calc(100dvh - 6rem);
+    min-height: 26rem;
+  }
+
+  .column {
+    @apply bg-surface relative flex min-h-0 flex-col rounded-xl;
+    --col-accent: var(--color-accent);
+  }
+
+  .column[data-column-id='todo'] {
+    --col-accent: var(--color-todo);
+  }
+
+  .column[data-column-id='doing'] {
+    --col-accent: var(--color-doing);
+  }
+
+  .column[data-column-id='done'] {
+    --col-accent: var(--color-done);
+  }
+
+  .column-header {
+    @apply flex items-center gap-2.5 px-4 pt-4 pb-3;
+  }
+
+  .column-dot {
+    @apply size-2.5 shrink-0 rounded-full;
+    background-color: var(--col-accent);
+  }
+
+  .column-name {
+    @apply min-w-0 truncate text-md font-semibold tracking-tight;
+  }
+
+  .badge {
+    @apply text-muted bg-hover rounded-full px-2 py-px text-xs font-medium tabular-nums;
+  }
+
+  .column-body {
+    @apply min-h-0 flex-1 overflow-y-auto px-2 pb-1;
+  }
+
+  .card-list {
+    @apply flex flex-col gap-2;
+  }
+
+  .card {
+    @apply bg-raised shadow-rest rounded-lg p-3;
+  }
+
+  .card-title {
+    @apply text-md font-[550] break-words;
+  }
+
+  .card-note {
+    @apply text-muted mt-1 line-clamp-3 text-sm break-words whitespace-pre-line;
+  }
+
+  .card-due {
+    @apply text-muted mt-2.5 flex items-center gap-1.5 text-xs font-medium;
+  }
+
+  .card-due.is-overdue {
+    color: var(--color-danger);
+  }
+
+  .empty-state {
+    @apply text-muted flex flex-col items-center gap-2.5 px-6 py-10 text-center text-md;
+  }
+
+  .composer {
+    @apply p-2;
+  }
+
+  .add-card {
+    @apply text-muted flex h-9 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-md font-medium;
+  }
+
+  .add-card:hover {
+    @apply text-fg;
+    background-color: var(--color-hover);
+  }
+
+  .add-form {
+    @apply bg-raised shadow-rest flex flex-col gap-2 rounded-lg p-3;
+  }
+
+  .field {
+    @apply bg-surface text-fg placeholder:text-muted w-full min-w-0 rounded-md px-2.5 text-md;
+    min-height: 2.25rem;
+  }
+
+  input.field[name='title'] {
+    @apply font-medium;
+  }
+
+  textarea.field {
+    @apply w-full resize-none py-2;
+  }
+
+  .field[aria-invalid='true'] {
+    box-shadow: 0 0 0 2px var(--color-danger);
+  }
+
+  .field-row {
+    @apply text-muted flex items-center gap-3 text-sm font-medium;
+  }
+
+  .field-row .field {
+    @apply flex-1;
+  }
+
+  .add-form-actions {
+    @apply flex justify-end gap-2 pt-1;
+  }
+
+  /* Phone: columns scroll sideways and snap, the next one peeking in. */
+  @media (max-width: 639.98px) {
+    .board {
+      @apply flex overflow-x-auto;
+      scroll-snap-type: x mandatory;
+      margin-inline: -1rem;
+      padding-inline: 1rem;
+      scroll-padding-inline: 1rem;
+    }
+
+    .column {
+      flex: 0 0 85vw;
+      scroll-snap-align: start;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .board {
+      @apply grid grid-cols-3 gap-4;
+    }
+  }
+
   /* Touch targets: at least 44 px at phone width. */
   @media (max-width: 639.98px) {
     .btn,
-    .menu-item {
+    .menu-item,
+    .add-card {
       min-height: 44px;
     }
 
     .btn-icon {
       min-width: 44px;
     }
+
+    /* 16 px stops iOS zooming the page when a field gets focus. */
+    .field {
+      min-height: 44px;
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .btn,
-  .menu-item {
+  .menu-item,
+  .add-card {
     transition:
       background-color var(--motion) ease-out,
+      color var(--motion) ease-out,
       transform var(--motion) ease-out;
   }
 
   .btn:active {
     transform: scale(0.97);
+  }
+
+  .add-form {
+    animation: form-in var(--motion) ease-out;
+  }
+
+  @keyframes form-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   .menu {
