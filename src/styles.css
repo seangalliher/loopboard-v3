@@ -1,1 +1,190 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/*
+ * Design tokens, defined once. Colour roles are the light values here; the dark values
+ * override the same variables under [data-theme='dark'] (set before first paint, see index.html).
+ * `static` keeps every token in the output even before a utility uses it.
+ */
+@theme static {
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-md: 0.875rem;
+  --text-md--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+
+  --spacing: 0.25rem;
+
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-rest: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 1px rgb(0 0 0 / 0.04);
+  --shadow-lifted: 0 8px 24px -8px rgb(0 0 0 / 0.18), 0 2px 4px rgb(0 0 0 / 0.06);
+
+  --color-board: #f6f7f9;
+  --color-surface: #eceef2;
+  --color-raised: #ffffff;
+  --color-fg: #14161a;
+  --color-muted: #667085;
+  --color-line: #e2e5ea;
+  --color-hover: rgb(20 22 26 / 0.06);
+  --color-accent: #5b5bd6;
+  --color-on-accent: #ffffff;
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-danger: #d92d20;
+  --color-popover-ring: transparent;
+
+  --color-todo: #0ea5e9;
+  --color-doing: #8b5cf6;
+  --color-done: #10b981;
+
+  --motion: 150ms;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --shadow-rest: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lifted: 0 8px 24px -8px rgb(0 0 0 / 0.5), 0 2px 4px rgb(0 0 0 / 0.25);
+
+  --color-board: #0d0e11;
+  --color-surface: #15171c;
+  --color-raised: #1d2027;
+  --color-fg: #ecedf0;
+  --color-muted: #9aa1ad;
+  --color-line: #2a2e37;
+  --color-hover: rgb(255 255 255 / 0.07);
+  --color-accent: #8b8cf0;
+  --color-on-accent: #0d0e11;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #3a2a0a;
+  --color-danger: #f97066;
+  --color-popover-ring: #2a2e37;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-board text-fg font-sans text-md antialiased;
+    min-height: 100dvh;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+
+  /* One focus ring for every interactive element. Never removed. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .app-header {
+    @apply sticky top-0 z-10 border-b backdrop-blur-md;
+    background-color: color-mix(in oklab, var(--color-board) 80%, transparent);
+  }
+
+  .logo-mark {
+    @apply text-on-accent shadow-rest grid size-7 shrink-0 place-items-center rounded-md;
+    background-image: linear-gradient(
+      140deg,
+      var(--color-accent),
+      color-mix(in oklab, var(--color-accent) 55%, var(--color-doing))
+    );
+  }
+
+  .btn {
+    @apply text-fg inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-md font-medium whitespace-nowrap select-none;
+  }
+
+  .btn:hover,
+  .btn[aria-expanded='true'] {
+    background-color: var(--color-hover);
+  }
+
+  .btn-icon {
+    @apply w-9 px-0;
+  }
+
+  .menu-anchor {
+    @apply relative;
+  }
+
+  .menu {
+    @apply bg-raised absolute top-full right-0 z-20 mt-2 min-w-56 rounded-xl p-1.5;
+    box-shadow: var(--shadow-lifted), 0 0 0 1px var(--color-popover-ring);
+  }
+
+  .menu-item {
+    @apply text-fg flex h-9 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-md;
+  }
+
+  .menu-item:hover,
+  .menu-item:focus-visible {
+    background-color: var(--color-hover);
+  }
+
+  .menu-item > svg {
+    @apply text-muted shrink-0;
+  }
+
+  /* Touch targets: at least 44 px at phone width. */
+  @media (max-width: 639.98px) {
+    .btn,
+    .menu-item {
+      min-height: 44px;
+    }
+
+    .btn-icon {
+      min-width: 44px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn,
+  .menu-item {
+    transition:
+      background-color var(--motion) ease-out,
+      transform var(--motion) ease-out;
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .menu {
+    animation: menu-in var(--motion) ease-out;
+    transform-origin: top right;
+  }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+}
