@@ -17,8 +17,8 @@ The author already checked that the change does what they intended. Repeating th
 
 ## Two kinds of round, each with a time budget
 
-- **Round 1** reviews the whole staged diff against the issue's acceptance criteria. Budget: about 15 minutes.
-- **A delta round** (round 2 and later) reviews **only the repair diff** you are given (`git diff <previous candidate tree> <new candidate tree>`) and **only the findings it answers**. Check that each of those findings is fixed, and that the repair broke nothing in the code it touches. Do not re-review unchanged code, rerun the whole acceptance sweep or look for new kinds of problem elsewhere. Budget: about 8 minutes.
+- **Round 1** reviews the whole staged diff against the issue's acceptance criteria. Budget: about 10 minutes.
+- **A delta round** (round 2 and later) reviews **only the repair diff** you are given (`git diff <previous candidate tree> <new candidate tree>`) and **only the findings it answers**. Check that each of those findings is fixed, and that the repair broke nothing in the code it touches. Do not re-review unchanged code, rerun the whole acceptance sweep or look for new kinds of problem elsewhere. Budget: about 5 minutes.
 
 When the budget runs out, stop and report what you checked and what you did not. A partial review that says so is better than a long one.
 

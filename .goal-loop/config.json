@@ -10,8 +10,14 @@
     "orchestrator": "high",
     "architect": "high",
     "builder": "high",
-    "reviewer": "high",
     "deepReviewer": "max"
+  },
+  "rigor": {
+    "profile": "app",
+    "escalateBaseAfter": 2
+  },
+  "agents": {
+    "namePrefix": "Goal "
   },
   "gate": {
     "command": "npm test",
@@ -20,17 +26,8 @@
   "tests": {
     "focused": "npx vitest run <test file>"
   },
-  "review": {
-    "firstRoundMinutes": 15,
-    "deltaRoundMinutes": 8
-  },
   "commands": {
     "timeoutMinutes": 10
-  },
-  "buildPrompts": {
-    "maxPerRun": 3,
-    "maxBytes": 4096,
-    "minutes": 10
   },
   "visual": {
     "buildCommand": "npm run build",
@@ -60,8 +57,12 @@
     "thresholdMiB": 25
   },
   "ralph": {
-    "copilotCommand": "copilot",
-    "ghCommand": "gh",
+    "copilotCommand": [
+      "copilot"
+    ],
+    "ghCommand": [
+      "gh"
+    ],
     "maxIterations": 12,
     "stallLimit": 3,
     "iterationTimeoutMinutes": 120,
