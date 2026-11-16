@@ -1,9 +1,10 @@
 import { TriangleAlert, X } from 'lucide';
-import { addCard, deleteCard, localDate, setWipLimit, updateCard, type Card, type ColumnId } from '../model';
+import { addCard, deleteCard, localDate, moveCard, setWipLimit, updateCard, type Card, type ColumnId } from '../model';
 import type { Store } from '../store';
 import { createAddForm, createEditForm, type AddForm, type EditForm, type NewCardValues } from './add-form';
 import type { CardActions } from './card';
 import { createColumn } from './column';
+import { attachDrag } from './drag';
 import { icon } from './icon';
 import { WIP_ERROR, createWipForm, limitFromText, type WipForm } from './wip-form';
 
@@ -17,7 +18,8 @@ function newId(): string {
 /**
  * Draws the board into `root` and redraws it from the store's state after every change.
  * Focus is restored by `data-card-id` (or, for the add-card controls, which survive redraws,
- * by element), and scroll positions are kept.
+ * by element), and scroll positions are kept. While a card is being dragged nothing is
+ * redrawn; one redraw follows when the drag ends.
  */
 export function mountBoard(root: HTMLElement, store: Store): void {
   const status = document.createElement('div');
@@ -34,6 +36,18 @@ export function mountBoard(root: HTMLElement, store: Store): void {
   const wipForms = new Map<ColumnId, WipForm>();
   let editing: { cardId: string; form: EditForm } | null = null;
   let renderedDay = '';
+  let renderWaiting = false;
+
+  const drag = attachDrag(columns, {
+    onDrop(cardId, target) {
+      const before = store.getState();
+      const result = store.dispatch((b) => moveCard(b, cardId, target.columnId, target.index));
+      if (store.getState() !== before) showStatus(result.ok ? null : result.error);
+    },
+    onFinish: () => {
+      if (renderWaiting) render();
+    },
+  });
 
   function showStatus(message: string | null) {
     if (message === null) {
@@ -87,6 +101,7 @@ export function mountBoard(root: HTMLElement, store: Store): void {
       (values) => saveEdit(card, values),
       () => stopEdit(cardId),
     );
+    form.element.dataset.editingCardId = cardId; // lets a drag count the form as this card's place
     editing = { cardId, form };
     render();
     form.focus();
@@ -156,6 +171,11 @@ export function mountBoard(root: HTMLElement, store: Store): void {
   }
 
   function render() {
+    if (drag.active) {
+      renderWaiting = true;
+      return;
+    }
+    renderWaiting = false;
     if (editing && !store.getState().columns.some((c) => c.cards.some((x) => x.id === editing?.cardId))) {
       editing = null;
     }

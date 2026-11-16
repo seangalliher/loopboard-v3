@@ -74,9 +74,11 @@ describe('createCard', () => {
       el.remove();
     });
 
-    it('has a decorative drag handle that is not a control', () => {
+    it('has a pointer-only drag handle with a tooltip, that is not a control', () => {
       const handle = render(make()).querySelector('.card-handle') as HTMLElement;
       expect(handle.getAttribute('aria-hidden')).toBe('true');
+      expect(handle.title).toBe('Drag to move');
+      expect(handle.tabIndex).toBe(-1);
       expect(handle.tagName).toBe('SPAN');
       expect(handle.querySelector('svg')).not.toBeNull();
     });

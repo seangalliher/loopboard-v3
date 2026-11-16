@@ -38,7 +38,7 @@ function flipIfCutOff(panel: HTMLElement) {
 /**
  * One card. It is focusable so the board can restore focus after a re-render
  * (matched on `data-card-id`) and so later issues can add keyboard moves. A drag handle
- * (not yet draggable) and a "…" menu button sit in it, hidden until hover or focus.
+ * (the start of a pointer drag, see drag.ts) and a "…" menu button sit in it, hidden until hover or focus.
  * All user text goes in with `textContent`.
  */
 export function createCard(card: Card, columnId: ColumnId, today: Date, actions: CardActions): HTMLLIElement {
@@ -49,7 +49,8 @@ export function createCard(card: Card, columnId: ColumnId, today: Date, actions:
 
   const handle = document.createElement('span');
   handle.className = 'card-handle';
-  handle.setAttribute('aria-hidden', 'true');
+  handle.setAttribute('aria-hidden', 'true'); // pointer only; keyboard moves are on the card itself
+  handle.title = 'Drag to move';
   handle.append(icon(GripVertical, 16));
 
   const anchor = document.createElement('div');
