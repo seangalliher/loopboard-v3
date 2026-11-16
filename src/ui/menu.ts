@@ -18,8 +18,14 @@ export interface Menu {
  * button's parent should be a `.menu-anchor` (position: relative).
  * Closes on outside click, Escape (focus returns to the button), Tab and selection.
  * Keys: Arrow Up/Down (wrapping), Home, End; ArrowDown/ArrowUp on the button also open it.
+ * `onOpen` runs each time the panel has been shown, before focus moves into it (for example to
+ * flip it upwards when it would be cut off).
  */
-export function createMenu(button: HTMLButtonElement, items: MenuItem[]): Menu {
+export function createMenu(
+  button: HTMLButtonElement,
+  items: MenuItem[],
+  options: { onOpen?: (panel: HTMLElement) => void } = {},
+): Menu {
   const panel = document.createElement('div');
   panel.className = 'menu';
   panel.setAttribute('role', 'menu');
@@ -67,6 +73,7 @@ export function createMenu(button: HTMLButtonElement, items: MenuItem[]): Menu {
     if (!isOpen()) document.addEventListener('pointerdown', onOutsidePointerDown);
     panel.hidden = false;
     button.setAttribute('aria-expanded', 'true');
+    options.onOpen?.(panel);
     itemButtons.at(focus === 'first' ? 0 : -1)?.focus();
   }
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAddForm, type AddForm, type NewCardValues } from './add-form';
+import { createAddForm, createEditForm, type AddForm, type EditForm, type NewCardValues } from './add-form';
 
 let form: AddForm;
 let onSubmit: ReturnType<typeof vi.fn<(values: NewCardValues) => boolean>>;
@@ -118,5 +118,59 @@ describe('createAddForm', () => {
     key(title(), 'Enter');
     expect(form.isOpen).toBe(true);
     expect(title().value).toBe('Refused');
+  });
+});
+
+describe('createEditForm', () => {
+  const card = { title: 'Write docs', note: 'Mention shortcuts', due: '2030-01-02' as string | null };
+  let submit: ReturnType<typeof vi.fn<(values: NewCardValues) => boolean>>;
+  let cancel: ReturnType<typeof vi.fn<() => void>>;
+  let edit: EditForm;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    submit = vi.fn<(values: NewCardValues) => boolean>(() => true);
+    cancel = vi.fn<() => void>();
+    edit = createEditForm(card, submit, cancel);
+    document.body.append(edit.element);
+  });
+
+  it('opens prefilled with the card, labelled, and focuses the title', () => {
+    expect(edit.element.tagName).toBe('LI');
+    expect(formEl().hidden).toBe(false);
+    expect(formEl().getAttribute('aria-label')).toBe('Edit card: Write docs');
+    expect([title().value, note().value, due().value]).toEqual(['Write docs', 'Mention shortcuts', '2030-01-02']);
+    edit.focus();
+    expect(document.activeElement).toBe(title());
+  });
+
+  it('prefills an empty due date for a card without one', () => {
+    document.body.innerHTML = '';
+    document.body.append(createEditForm({ ...card, due: null }, submit, cancel).element);
+    expect(due().value).toBe('');
+  });
+
+  it('saves the changed values on Enter in the title', () => {
+    title().value = 'Write better docs';
+    note().value = '  New note ';
+    due().value = '';
+    key(title(), 'Enter');
+    expect(submit).toHaveBeenCalledExactlyOnceWith({ title: 'Write better docs', note: 'New note', due: '' });
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('cancels on Escape and on Cancel without saving', () => {
+    title().value = 'Changed';
+    key(title(), 'Escape');
+    q<HTMLButtonElement>('[data-cancel]').click();
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('refuses an empty title', () => {
+    title().value = '  ';
+    key(title(), 'Enter');
+    expect(submit).not.toHaveBeenCalled();
+    expect(title().getAttribute('aria-invalid')).toBe('true');
   });
 });

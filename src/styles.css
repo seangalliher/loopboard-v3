@@ -215,11 +215,40 @@
   }
 
   .badge {
-    @apply text-muted bg-hover rounded-full px-2 py-px text-xs font-medium tabular-nums;
+    @apply text-muted bg-hover shrink-0 rounded-full px-2 py-px text-xs font-medium tabular-nums;
+  }
+
+  /* Over the limit: the warning colours, with the "n of m" line below as the text alternative. */
+  .badge.is-over {
+    color: var(--color-warning);
+    background-color: var(--color-warning-bg);
+  }
+
+  .column-actions {
+    @apply -my-1.5 -mr-2 ml-auto shrink-0;
+  }
+
+  .wip-warning {
+    @apply mx-3 mb-2 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium;
+    color: var(--color-warning);
+    background-color: var(--color-warning-bg);
+  }
+
+  .wip-warning > svg {
+    @apply shrink-0;
+  }
+
+  .wip-form {
+    @apply bg-raised shadow-rest mx-2 mb-2 flex flex-col gap-2 rounded-lg p-3;
+  }
+
+  .wip-error {
+    @apply text-sm font-medium;
+    color: var(--color-danger);
   }
 
   .column-body {
-    @apply min-h-0 flex-1 overflow-y-auto px-2 pb-1;
+    @apply min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-1;
   }
 
   .card-list {
@@ -227,11 +256,69 @@
   }
 
   .card {
-    @apply bg-raised shadow-rest rounded-lg p-3;
+    @apply bg-raised shadow-rest relative rounded-lg p-3 pl-3.5;
+  }
+
+  /* Catches the pointer in the 2 px the lifted card leaves, so it does not flicker at its edge. */
+  .card::after {
+    content: '';
+    @apply absolute inset-x-0 -bottom-0.5 h-0.5;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    @apply z-10;
+    box-shadow: var(--shadow-lifted);
+    transform: translateY(-2px);
+  }
+
+  /* Actions are hidden at rest and cannot be clicked until shown, but stay in the tab order. */
+  .card-handle,
+  .card-actions {
+    @apply opacity-0;
+  }
+
+  .card-actions {
+    @apply absolute top-1.5 right-1.5 pointer-events-none;
+  }
+
+  .card-handle {
+    @apply text-muted pointer-events-none absolute top-3.5 -left-0.5;
+  }
+
+  .card:hover .card-handle,
+  .card:focus-within .card-handle,
+  .card:hover .card-actions,
+  .card:focus-within .card-actions {
+    @apply opacity-100;
+  }
+
+  .card:hover .card-actions,
+  .card:focus-within .card-actions {
+    @apply pointer-events-auto;
+  }
+
+  .card-menu-button {
+    @apply text-muted size-7;
+  }
+
+  .card-menu-button:hover,
+  .card-menu-button[aria-expanded='true'] {
+    @apply text-fg;
+  }
+
+  .card .menu {
+    @apply mt-1;
+  }
+
+  /* Flipped by the menu when it would be cut off by the bottom of the column. */
+  .menu.menu-up {
+    @apply top-auto bottom-full mt-0 mb-1;
+    transform-origin: bottom right;
   }
 
   .card-title {
-    @apply text-md font-[550] break-words;
+    @apply text-md pr-7 font-[550] break-words;
   }
 
   .card-note {
@@ -330,6 +417,16 @@
       min-width: 44px;
     }
 
+    /* The card's "…" button gets the full 44 px target in the card's corner. */
+    .card-actions {
+      top: 0;
+      right: 0;
+    }
+
+    .card-title {
+      @apply pr-8;
+    }
+
     /* 16 px stops iOS zooming the page when a field gets focus. */
     .field {
       min-height: 44px;
@@ -353,7 +450,19 @@
     transform: scale(0.97);
   }
 
-  .add-form {
+  .card {
+    transition:
+      transform var(--motion) ease-out,
+      box-shadow var(--motion) ease-out;
+  }
+
+  .card-handle,
+  .card-actions {
+    transition: opacity var(--motion) ease-out;
+  }
+
+  .add-form,
+  .wip-form {
     animation: form-in var(--motion) ease-out;
   }
 
