@@ -21,6 +21,7 @@ Read `.goal-loop/GOAL.md` and the repository as it is. Write `.goal-loop/PLAN.md
    - **Acceptance criteria**: observable checks a reviewer can run ("`npm test` covers X", "the page shows Y when Z"), not intentions;
    - **Depends on**: earlier issues by their number in the plan;
    - **Size**: small enough for one Builder delegation and one review (about a day of human work or less). Split anything bigger.
+   - **Rigor** (only when it should start above the profile's tier, which is **light** for the `app` profile; leave it out at full): `standard` or `full`, whichever is above light, with the reason in one line, for an issue that touches security or privacy, untrusted input, stored data, an interface later issues depend on, or CI and deploy. Leave it out otherwise; the Orchestrator raises tiers on evidence as the work goes.
 3. **Design** (only when the goal has a user interface; at most 25 lines). The bar is an interface a user would call current and well made, not one that merely works: people judge the whole project by how it looks. Name:
    - the **styling approach**: a component or styling system, or plain CSS built on design tokens, with a one-line reason; prefer what the goal and repository allow;
    - the **tokens**: type (font stack and a size scale), spacing scale, colour roles for light and dark (surface, text, muted, accent, danger, border), radius and shadow;
@@ -41,7 +42,7 @@ Only when `PLAN.md` starts with an `Approved:` line. File each planned issue wit
 
 ## build-prompt: one issue, rarely, small
 
-The issue is normally the Builder's whole brief. The Orchestrator asks for a build prompt only on a stated trigger (a Builder hard stop that needs a design decision, an interface later issues depend on that the plan leaves open, or a premise the code contradicts). If the request names no trigger, or it is for a repair round, do not write one: answer that the issue (or the review's blockers) is the brief, and end.
+The issue is normally the Builder's whole brief. The Orchestrator asks for a build prompt only on a stated trigger (a Builder hard stop that needs a design decision, an interface later issues depend on that the plan leaves open, a premise the code contradicts, or, for an issue at the full tier, a change to code other modules call). If the request names no trigger, or it is for a repair round, do not write one: answer that the issue (or the review's blockers) is the brief, and end.
 
 A build prompt **settles the one open point**; it does not restate the issue or specify the code. Its hard limits:
 
