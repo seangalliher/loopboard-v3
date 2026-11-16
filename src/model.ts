@@ -44,7 +44,7 @@ export const MAX_NOTE_LENGTH = 2000;
 
 const DUE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-function isValidDue(value: string): boolean {
+export function isValidDue(value: string): boolean {
   const m = DUE_PATTERN.exec(value);
   if (!m) return false;
   const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
