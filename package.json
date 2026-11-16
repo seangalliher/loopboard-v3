@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "npm run lint && npm run typecheck && vitest run"
+    "test": "npm run lint && npm run typecheck && vitest run && playwright test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { addCard, deleteCard, emptyBoard, setWipLimit, type Board } from '../model';
-import { STORAGE_KEY, saveBoard, type StorageLike } from '../storage';
+import { addCard, deleteCard, emptyBoard, moveCard, setWipLimit, updateCard, type Board } from '../model';
+import { STORAGE_KEY, exportJson, saveBoard, type StorageLike } from '../storage';
 import { createStore, type Store } from '../store';
 import { mountBoard } from './board';
+import { importText } from './data-menu';
 
 let root: HTMLElement;
 let data: Map<string, string>;
@@ -313,6 +314,30 @@ describe('card menu', () => {
     store.dispatch((b) => deleteCard(b, 't0'));
     expect(document.querySelector('.card-editing')).toBeNull();
     expect(titles('todo')).toEqual(['two']);
+  });
+
+  it('an import that replaces the card being edited closes the form and shows the imported card', () => {
+    seed(['one', 'two']);
+    const store = mount();
+    chooseCardAction('t0', 'Edit');
+    editField('title').value = 'Unsaved edit';
+    const imported = addCard(emptyBoard(), 'todo', { id: 't0', title: 'Imported replacement' });
+    expect(importText(exportJson(imported), store, () => true)).toEqual({ status: 'imported' });
+    expect(document.querySelector('.card-editing')).toBeNull();
+    expect(titles('todo')).toEqual(['Imported replacement']);
+    expect(storedTitles('todo')).toEqual(['Imported replacement']);
+  });
+
+  it('keeps the form and draft when the edited card is moved or another card changes', () => {
+    seed(['one', 'two', 'three']);
+    const store = mount();
+    chooseCardAction('t0', 'Edit');
+    editField('title').value = 'Half edited';
+    store.dispatch((b) => updateCard(b, 't1', { title: 'two changed' }));
+    store.dispatch((b) => moveCard(b, 't2', 'doing', 0));
+    store.dispatch((b) => moveCard(b, 't0', 'done', 0)); // same card object, new place
+    expect(editField('title').value).toBe('Half edited');
+    expect(column('done').querySelector('.card-editing')).not.toBeNull();
   });
 
   it('closes on Escape and returns focus to its button', () => {
