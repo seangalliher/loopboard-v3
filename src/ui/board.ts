@@ -22,8 +22,9 @@ function newId(): string {
  * by element), and scroll positions are kept. While a card is being dragged, or is grabbed with
  * the keyboard, store changes are not drawn; one redraw follows when it ends. A grabbed card is
  * drawn in its prospective position (not saved until the drop) by a redraw the keyboard asks for.
+ * Returns `showStatus`, which shows a dismissible message above the board (null clears it).
  */
-export function mountBoard(root: HTMLElement, store: Store): void {
+export function mountBoard(root: HTMLElement, store: Store): { showStatus: (message: string | null) => void } {
   const status = document.createElement('div');
   status.className = 'status';
   status.setAttribute('role', 'status');
@@ -46,7 +47,7 @@ export function mountBoard(root: HTMLElement, store: Store): void {
   // change elsewhere. An open edit form does too, for the same reason.
   const forms = new Map<ColumnId, AddForm>();
   const wipForms = new Map<ColumnId, WipForm>();
-  let editing: { cardId: string; form: EditForm } | null = null;
+  let editing: { cardId: string; card: Card; form: EditForm } | null = null;
   let renderedDay = '';
   let renderWaiting = false;
 
@@ -127,7 +128,7 @@ export function mountBoard(root: HTMLElement, store: Store): void {
       () => stopEdit(cardId),
     );
     form.element.dataset.editingCardId = cardId; // lets a drag count the form as this card's place
-    editing = { cardId, form };
+    editing = { cardId, card, form };
     render();
     form.focus();
   }
@@ -219,7 +220,9 @@ export function mountBoard(root: HTMLElement, store: Store): void {
     }
     renderWaiting = false;
     const board = keyboard.grab ? previewBoard(store.getState(), keyboard.grab) : store.getState();
-    if (editing && !board.columns.some((c) => c.cards.some((x) => x.id === editing?.cardId))) {
+    // The form belongs to the card object it was opened on. A moved card is the same object; a
+    // removed card or one replaced under the same id (an import) is not, so the form closes.
+    if (editing && !board.columns.some((c) => c.cards.some((x) => x === editing?.card))) {
       editing = null;
     }
     const active = document.activeElement instanceof HTMLElement && root.contains(document.activeElement)
@@ -296,4 +299,5 @@ export function mountBoard(root: HTMLElement, store: Store): void {
   });
   window.addEventListener('focus', refreshIfNewDay);
   window.addEventListener('pageshow', refreshIfNewDay);
+  return { showStatus };
 }
