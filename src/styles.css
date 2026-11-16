@@ -283,7 +283,17 @@
   }
 
   .card-handle {
-    @apply text-muted pointer-events-none absolute top-3.5 -left-0.5;
+    @apply text-muted pointer-events-none absolute top-3.5 -left-0.5 cursor-grab select-none;
+    /* The one place a touch does not scroll: it starts a drag instead. */
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* A larger target than the 16 px icon, over the card's padding. */
+  .card-handle::before {
+    content: '';
+    position: absolute;
+    inset: -10px -6px;
   }
 
   .card:hover .card-handle,
@@ -293,9 +303,75 @@
     @apply opacity-100;
   }
 
+  .card:hover .card-handle,
+  .card:focus-within .card-handle,
   .card:hover .card-actions,
   .card:focus-within .card-actions {
     @apply pointer-events-auto;
+  }
+
+  /* No hover on touch screens: the handle is always there, with a 44 px target. */
+  @media (hover: none), (pointer: coarse) {
+    .card-handle {
+      @apply pointer-events-auto opacity-100;
+    }
+
+    .card-handle::before {
+      inset: -14px;
+    }
+  }
+
+  /* While dragging: the card stays as a dim placeholder; a tilted copy follows the pointer. */
+  .card.is-dragging {
+    @apply opacity-40;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /*
+   * Grabbed with the keyboard (Space): lifted higher and ringed in the accent colour next to the
+   * ordinary focus ring, so it reads as "in hand". No background tint: the overdue date's red
+   * only just reaches 4.5:1 on the plain card.
+   */
+  .card.is-grabbed {
+    box-shadow: var(--shadow-lifted), 0 0 0 2px var(--color-accent);
+    transform: translateY(-4px);
+  }
+
+  .board.is-dragging,
+  .board.is-dragging * {
+    @apply cursor-grabbing;
+  }
+
+  .drag-ghost {
+    @apply pointer-events-none fixed top-0 left-0 z-50 list-none;
+    box-shadow: var(--shadow-lifted);
+  }
+
+  .drag-ghost .card-handle {
+    @apply opacity-100;
+  }
+
+  .drop-indicator {
+    @apply pointer-events-none fixed z-40 h-[3px] rounded-full;
+    background-color: var(--color-accent);
+  }
+
+  /* The round end makes the line read as an insertion point. */
+  .drop-indicator::before {
+    content: '';
+    @apply absolute top-1/2 -left-1 size-2.5 -translate-y-1/2 rounded-full;
+    background-color: inherit;
+  }
+
+  .column.is-drop-target {
+    background-color: color-mix(in oklab, var(--col-accent) 10%, var(--color-surface));
+    box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--col-accent) 55%, transparent);
+  }
+
+  /* Sideways auto-scroll moves the board a little at a time, which snapping would undo. */
+  .board.is-dragging {
+    scroll-snap-type: none;
   }
 
   .card-menu-button {
@@ -369,6 +445,15 @@
 
   .field[aria-invalid='true'] {
     box-shadow: 0 0 0 2px var(--color-danger);
+  }
+
+  /*
+   * The date field's calendar button is a tab stop inside the input, and the input itself does not
+   * match :focus-visible while it has focus: ring the whole field instead, the same ring.
+   */
+  input[type='date']:focus-within {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .field-row {
@@ -464,6 +549,30 @@
   .add-form,
   .wip-form {
     animation: form-in var(--motion) ease-out;
+  }
+
+  /* The lifted card tilts and grows a little as it picks up; the indicator and column glide. */
+  .drag-ghost {
+    rotate: 3deg;
+    scale: 1.02;
+    animation: lift-in var(--motion) ease-out;
+  }
+
+  @keyframes lift-in {
+    from {
+      rotate: 0deg;
+      scale: 1;
+    }
+  }
+
+  .drop-indicator {
+    transition: top 80ms ease-out;
+  }
+
+  .column {
+    transition:
+      background-color var(--motion) ease-out,
+      box-shadow var(--motion) ease-out;
   }
 
   @keyframes form-in {

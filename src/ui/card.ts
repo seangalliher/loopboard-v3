@@ -1,11 +1,16 @@
-import { CalendarDays, Ellipsis, GripVertical, Pencil, Trash2 } from 'lucide';
-import { isOverdue, type Card, type ColumnId } from '../model';
+import { CalendarDays, Ellipsis, GripVertical, MoveRight, Pencil, Trash2 } from 'lucide';
+import { isOverdue, type Card, type Column, type ColumnId } from '../model';
 import { icon } from './icon';
+import { MOVE_HINT_ID } from './keyboard';
 import { createMenu, type MenuItem } from './menu';
 
 export interface CardActions {
   onEdit: (cardId: string) => void;
   onDelete: (cardId: string) => void;
+  /** Moves the card to the end of the column. */
+  onMove: (cardId: string, to: ColumnId) => void;
+  /** The columns, for the "Move to …" items. */
+  columns: readonly Pick<Column, 'id' | 'title'>[];
 }
 
 /** "Nov 20", with the year when it is not the current one. `due` is `YYYY-MM-DD`. */
@@ -18,10 +23,13 @@ function formatDue(due: string, today: Date): string {
   });
 }
 
-/** The items of a card's "…" menu. Later items (for example "Move to …") are appended here. */
-export function cardMenuItems(card: Card, actions: CardActions): MenuItem[] {
+/** The items of a card's "…" menu: Edit, a "Move to …" for each other column, Delete. */
+export function cardMenuItems(card: Card, columnId: ColumnId, actions: CardActions): MenuItem[] {
   return [
     { label: 'Edit', icon: Pencil, onSelect: () => actions.onEdit(card.id) },
+    ...actions.columns
+      .filter((c) => c.id !== columnId)
+      .map((c) => ({ label: `Move to ${c.title}`, icon: MoveRight, onSelect: () => actions.onMove(card.id, c.id) })),
     { label: 'Delete', icon: Trash2, onSelect: () => actions.onDelete(card.id) },
   ];
 }
@@ -37,8 +45,8 @@ function flipIfCutOff(panel: HTMLElement) {
 
 /**
  * One card. It is focusable so the board can restore focus after a re-render
- * (matched on `data-card-id`) and so later issues can add keyboard moves. A drag handle
- * (not yet draggable) and a "…" menu button sit in it, hidden until hover or focus.
+ * (matched on `data-card-id`) and so it can be moved with the keyboard (keyboard.ts). A drag handle
+ * (the start of a pointer drag, see drag.ts) and a "…" menu button sit in it, hidden until hover or focus.
  * All user text goes in with `textContent`.
  */
 export function createCard(card: Card, columnId: ColumnId, today: Date, actions: CardActions): HTMLLIElement {
@@ -46,10 +54,14 @@ export function createCard(card: Card, columnId: ColumnId, today: Date, actions:
   el.className = 'card';
   el.dataset.cardId = card.id;
   el.tabIndex = 0;
+  // A name for the focus stop (the title); how to move it is the description. The keys are in keyboard.ts.
+  el.setAttribute('aria-label', card.title);
+  el.setAttribute('aria-describedby', MOVE_HINT_ID);
 
   const handle = document.createElement('span');
   handle.className = 'card-handle';
-  handle.setAttribute('aria-hidden', 'true');
+  handle.setAttribute('aria-hidden', 'true'); // pointer only; keyboard moves are on the card itself
+  handle.title = 'Drag to move';
   handle.append(icon(GripVertical, 16));
 
   const anchor = document.createElement('div');
@@ -62,7 +74,7 @@ export function createCard(card: Card, columnId: ColumnId, today: Date, actions:
   menuButton.title = 'Card actions';
   menuButton.append(icon(Ellipsis, 16));
   anchor.append(menuButton);
-  createMenu(menuButton, cardMenuItems(card, actions), { onOpen: flipIfCutOff });
+  createMenu(menuButton, cardMenuItems(card, columnId, actions), { onOpen: flipIfCutOff });
 
   el.append(handle, anchor);
 

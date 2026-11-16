@@ -468,3 +468,275 @@ describe('WIP limit', () => {
     expect(document.activeElement).toBe(input);
   });
 });
+
+describe('keyboard moves', () => {
+  const live = () => q<HTMLElement>('[aria-live="polite"]').textContent;
+  const press = (target: Element, k: string, init: KeyboardEventInit = {}) =>
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }));
+  const grab = (id: string) => {
+    card(id).focus();
+    press(card(id), ' ');
+  };
+  const order = (id: string) => [...column(id).querySelectorAll<HTMLElement>('[data-card-id]')].map((e) => e.dataset.cardId);
+  const settle = () => new Promise((resolve) => setTimeout(resolve)); // focusout is handled in a later task
+
+  it('Space grabs the focused card: a data attribute and class mark it, focus stays, the live region says so', () => {
+    seed(['one', 'two', 'three'], ['four']);
+    mount();
+    grab('t1');
+    expect(card('t1').dataset.grabbed).toBe('');
+    expect(card('t1').classList.contains('is-grabbed')).toBe(true);
+    expect(document.activeElement).toBe(card('t1'));
+    expect(live()).toBe(
+      'Grabbed two. Currently in To do, position 2 of 3. Use arrow keys to move, Space to drop, Escape to cancel',
+    );
+  });
+
+  it('shows each move in place, announces it and saves nothing until the drop', () => {
+    seed(['one', 'two', 'three'], ['four']);
+    const store = mount();
+    const saved = data.get(STORAGE_KEY);
+    const board = store.getState();
+    grab('t1');
+
+    press(card('t1'), 'ArrowRight');
+    expect(order('doing')).toEqual(['d0', 't1']);
+    expect(order('todo')).toEqual(['t0', 't2']);
+    expect(live()).toBe('two moved to Doing, position 2 of 2');
+    expect(document.activeElement).toBe(card('t1'));
+    expect(card('t1').dataset.grabbed).toBe('');
+    expect(column('doing').querySelector('.badge')?.textContent).toBe('2 cards');
+
+    press(card('t1'), 'ArrowUp');
+    expect(order('doing')).toEqual(['t1', 'd0']);
+    expect(live()).toBe('two moved to Doing, position 1 of 2');
+    press(card('t1'), 'ArrowRight');
+    expect(column('done').querySelector('.empty-state')).toBeNull();
+    expect(order('done')).toEqual(['t1']);
+    expect(live()).toBe('two moved to Done, position 1 of 1');
+    press(card('t1'), 'ArrowLeft');
+    press(card('t1'), 'ArrowDown');
+    expect(order('doing')).toEqual(['d0', 't1']);
+
+    expect(store.getState()).toBe(board);
+    expect(data.get(STORAGE_KEY)).toBe(saved);
+    expect(document.activeElement).toBe(card('t1'));
+  });
+
+  it('stops at the edges: no move, nothing announced', () => {
+    seed(['one', 'two']);
+    mount();
+    grab('t0');
+    const announced = live();
+    press(card('t0'), 'ArrowUp');
+    press(card('t0'), 'ArrowLeft');
+    expect(order('todo')).toEqual(['t0', 't1']);
+    expect(live()).toBe(announced);
+  });
+
+  it.each([' ', 'Enter'])('%j drops the card, saves the move once and keeps focus on it', (dropKey) => {
+    seed(['one', 'two', 'three']);
+    const store = mount();
+    let saves = 0;
+    store.subscribe(() => saves++);
+    grab('t0');
+    press(card('t0'), 'ArrowRight');
+    press(card('t0'), 'ArrowRight');
+    expect(saves).toBe(0);
+    press(card('t0'), dropKey);
+
+    expect(saves).toBe(1);
+    expect(storedTitles('done')).toEqual(['one']);
+    expect(storedTitles('todo')).toEqual(['two', 'three']);
+    expect(card('t0').hasAttribute('data-grabbed')).toBe(false);
+    expect(card('t0').classList.contains('is-grabbed')).toBe(false);
+    expect(document.activeElement).toBe(card('t0'));
+    expect(live()).toBe('Dropped one in Done, position 1 of 1');
+    mount();
+    expect(titles('done')).toEqual(['one']);
+  });
+
+  it('dropping where it started saves nothing', () => {
+    seed(['one', 'two']);
+    mount();
+    const saved = data.get(STORAGE_KEY);
+    grab('t0');
+    press(card('t0'), 'ArrowDown');
+    press(card('t0'), 'ArrowUp');
+    press(card('t0'), ' ');
+    expect(data.get(STORAGE_KEY)).toBe(saved);
+    expect(live()).toBe('Dropped one in To do, position 1 of 2');
+  });
+
+  it('Escape puts the card back where it was, saves nothing and keeps focus on it', () => {
+    seed(['one', 'two', 'three'], ['four']);
+    const store = mount();
+    const saved = data.get(STORAGE_KEY);
+    const board = store.getState();
+    grab('t1');
+    press(card('t1'), 'ArrowRight');
+    press(card('t1'), 'ArrowDown');
+    press(card('t1'), 'Escape');
+
+    expect(order('todo')).toEqual(['t0', 't1', 't2']);
+    expect(order('doing')).toEqual(['d0']);
+    expect(card('t1').hasAttribute('data-grabbed')).toBe(false);
+    expect(document.activeElement).toBe(card('t1'));
+    expect(store.getState()).toBe(board);
+    expect(data.get(STORAGE_KEY)).toBe(saved);
+    expect(live()).toBe('Move cancelled. two is back in To do, position 2 of 3');
+    press(card('t1'), 'ArrowRight'); // no longer grabbed: the arrow does nothing
+    expect(order('todo')).toEqual(['t0', 't1', 't2']);
+  });
+
+  it('Tab (focus leaving the card) cancels the grab and the card goes back', async () => {
+    seed(['one', 'two'], ['four']);
+    mount();
+    grab('t0');
+    press(card('t0'), 'ArrowRight');
+    card('t0').querySelector<HTMLElement>('[data-card-menu]')?.focus();
+    await settle();
+    expect(order('todo')).toEqual(['t0', 't1']);
+    expect(card('t0').hasAttribute('data-grabbed')).toBe(false);
+    expect(storedTitles('doing')).toEqual(['four']);
+    expect(live()).toMatch(/^Move cancelled/);
+    expect(document.activeElement).toBe(card('t0').querySelector('[data-card-menu]'));
+  });
+
+  it('does not cancel while the redraws of its own moves replace the card', async () => {
+    seed(['one', 'two'], ['four']);
+    mount();
+    grab('t0');
+    press(card('t0'), 'ArrowRight');
+    press(card('t0'), 'ArrowRight');
+    await settle();
+    expect(card('t0').dataset.grabbed).toBe('');
+    expect(order('done')).toEqual(['t0']);
+  });
+
+  it('only a keypress on the card itself grabs: not its menu button, an open menu or a form field', () => {
+    seed(['one', 'two']);
+    mount();
+    const button = card('t0').querySelector<HTMLButtonElement>('[data-card-menu]') as HTMLButtonElement;
+    press(button, ' ');
+    button.click(); // opens the menu
+    press(document.activeElement as Element, ' ');
+    expect(document.querySelector('[data-grabbed]')).toBeNull();
+
+    chooseCardAction('t1', 'Edit');
+    const note = editField('note');
+    expect(press(note, ' ')).toBe(true); // not default-prevented: the space is typed
+    press(editField('title'), ' ');
+    expect(document.querySelector('[data-grabbed]')).toBeNull();
+    expect(live()).toBe('');
+  });
+
+  it('can grab another card while an edit form is open, which stays open', () => {
+    seed(['one', 'two', 'three']);
+    mount();
+    chooseCardAction('t0', 'Edit');
+    editField('title').value = 'draft';
+    grab('t2');
+    press(card('t2'), 'ArrowUp');
+    expect(editField('title').value).toBe('draft');
+    expect(order('todo')).toEqual(['t2', 't1']); // the form stands in for t0, so t2 is first, then ...
+    press(card('t2'), ' ');
+    expect(storedTitles('todo')).toEqual(['one', 'three', 'two']); // index 1: below the form's card
+  });
+
+  it('holds back a change to the store until the grab ends', () => {
+    seed(['one', 'two', 'three']);
+    const store = mount();
+    grab('t0');
+    press(card('t0'), 'ArrowDown');
+    store.dispatch((b) => deleteCard(b, 't2'));
+    expect(card('t2')).not.toBeNull();
+    press(card('t0'), 'Escape');
+    expect(document.querySelector('[data-card-id="t2"]')).toBeNull();
+    expect(order('todo')).toEqual(['t0', 't1']);
+  });
+
+  it('a held key does not drop what Space just grabbed', () => {
+    seed(['one', 'two']);
+    mount();
+    card('t0').focus();
+    press(card('t0'), ' ');
+    press(card('t0'), ' ', { repeat: true });
+    expect(card('t0').dataset.grabbed).toBe('');
+  });
+
+  it('ignores the keys with a modifier', () => {
+    seed(['one']);
+    mount();
+    card('t0').focus();
+    press(card('t0'), ' ', { ctrlKey: true });
+    expect(document.querySelector('[data-grabbed]')).toBeNull();
+  });
+
+  it('keeps the grabbed card on screen: scrolls it into view after each move', () => {
+    seed(['one', 'two'], ['four']);
+    mount();
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      grab('t0');
+      press(card('t0'), 'ArrowRight');
+      expect(scroll).toHaveBeenCalled();
+      expect(scroll.mock.contexts.at(-1)).toBe(card('t0'));
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it('does not let a press on a drag handle through to the pointer drag while a card is grabbed', () => {
+    seed(['one', 'two']);
+    mount();
+    const reached = vi.fn();
+    q('.board').addEventListener('pointerdown', reached);
+    const handle = () => card('t1').querySelector('.card-handle') as Element;
+    handle().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(reached).toHaveBeenCalledTimes(1);
+    grab('t0');
+    handle().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(reached).toHaveBeenCalledTimes(1);
+  });
+
+  it('has one polite live region and a hint every card is described by', () => {
+    seed(['one', 'two']);
+    mount();
+    expect(document.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+    expect(q('[aria-live="polite"]').closest('.board')).toBeNull(); // outside the redrawn part
+    for (const c of document.querySelectorAll('.card')) {
+      const hint = document.getElementById(c.getAttribute('aria-describedby') ?? '');
+      expect(hint?.textContent).toContain('Space');
+    }
+  });
+
+  describe('Move to … in the card menu', () => {
+    it('lists the other columns and moves the card to the end of the one chosen, saving it', () => {
+      seed(['one', 'two'], ['four']);
+      mount();
+      card('t0').querySelector<HTMLButtonElement>('[data-card-menu]')?.click();
+      expect([...card('t0').querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual([
+        'Edit',
+        'Move to Doing',
+        'Move to Done',
+        'Delete',
+      ]);
+      item(card('t0'), 'Move to Doing').click();
+      expect(order('doing')).toEqual(['d0', 't0']);
+      expect(storedTitles('doing')).toEqual(['four', 'one']);
+      expect(storedTitles('todo')).toEqual(['two']);
+      expect(document.activeElement).toBe(card('t0'));
+    });
+
+    it('moves into an empty column', () => {
+      seed(['one']);
+      mount();
+      chooseCardAction('t0', 'Move to Done');
+      expect(storedTitles('done')).toEqual(['one']);
+      expect(column('todo').querySelector('.empty-state')).not.toBeNull();
+      expect(document.activeElement).toBe(card('t0'));
+    });
+  });
+});
