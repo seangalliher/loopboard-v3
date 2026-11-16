@@ -56,6 +56,19 @@ describe('createMenu', () => {
     expect(document.activeElement).toBe(button);
   });
 
+  it('calls onOpen with the shown panel before focus moves into it, on every opening', () => {
+    document.body.innerHTML = '<div class="menu-anchor"><button id="b2">Menu</button></div>';
+    const second = document.querySelector<HTMLButtonElement>('#b2') as HTMLButtonElement;
+    const seen: boolean[] = [];
+    createMenu(second, [{ label: 'One', onSelect: () => {} }], {
+      onOpen: (p) => seen.push(p.hidden === false && !p.contains(document.activeElement)),
+    });
+    second.click();
+    second.click();
+    second.click();
+    expect(seen).toEqual([true, true]);
+  });
+
   it('closes on an outside pointer press, and ignores presses inside', () => {
     button.click();
     items()[1].dispatchEvent(new Event('pointerdown', { bubbles: true }));

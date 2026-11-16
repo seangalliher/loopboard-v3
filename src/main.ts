@@ -2,6 +2,8 @@ import './styles.css';
 import { ChevronDown, Download, Monitor, Moon, Repeat, Sun, Upload } from 'lucide';
 import { APP_NAME } from './app-name';
 import { applyTheme, nextTheme, readTheme, saveTheme, type ThemeChoice } from './theme';
+import { createStore } from './store';
+import { mountBoard } from './ui/board';
 import { icon } from './ui/icon';
 import { createMenu } from './ui/menu';
 
@@ -71,8 +73,9 @@ function buildHeader(): HTMLElement {
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (app) {
-  const board = document.createElement('main');
-  board.className = 'mx-auto max-w-6xl px-4 py-6 sm:px-6';
-  board.setAttribute('aria-label', 'Board');
-  app.append(buildHeader(), board);
+  const main = document.createElement('main');
+  main.className = 'mx-auto max-w-6xl px-4 pt-5 pb-4 sm:px-6 sm:pt-6';
+  main.setAttribute('aria-label', 'Board');
+  app.append(buildHeader(), main);
+  mountBoard(main, createStore());
 }

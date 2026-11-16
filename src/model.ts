@@ -174,7 +174,7 @@ export function isOverLimit(column: Column): boolean {
   return column.wipLimit !== null && column.cards.length > column.wipLimit;
 }
 
-function localDate(d: Date): string {
+export function localDate(d: Date): string {
   const pad = (n: number, w = 2) => String(n).padStart(w, '0');
   return `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
